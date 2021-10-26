@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #set some useful variable names
-export pcode=CX491 #project code
+export pcode=CABCD #project code
 export pcal=1934-638 #primary calibrator source name
 export scal=1923+210 #secondary calibrator source name
-export target=ZTF18abnbzvx #target name
+export target=mysrc #target name
 export freq=5500 #frequency band (e.g. 2100, 5500, 9000)
 export refant=1 #reference antenna for phase calibration
 export ifext="" #IF extension for L-band or zoom bands (e.g. cuvir.2100.1, cuvir.2100.2)
