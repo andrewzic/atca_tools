@@ -1,15 +1,23 @@
 #!/bin/bash
 
 #set some useful variable names
-export pcode=CABCD #project code
+export pcode=C1726 #project code
 export pcal=1934-638 #primary calibrator source name
-export scal=1923+210 #secondary calibrator source name
+#change this
+export scal=mycal #secondary calibrator source name
+#change this
 export target=mysrc #target name
 export freq=5500 #frequency band (e.g. 2100, 5500, 9000)
-export refant=1 #reference antenna for phase calibration
-export ifext="" #IF extension for L-band or zoom bands (e.g. cuvir.2100.1, cuvir.2100.2)
+export refant=3 #reference antenna for phase calibration (sets the phase zero point)
+export ifext="" #IF extension for L-band or zoom bands (e.g. 1934-638.2100.1, 1934-638.2100.2. Should be blank except if freq=2100
 
-export pcal_fname_pre=2021-10-23_0707 #primary calibration filename prefix
+
+#select a primary calibrator filename prefix from the list below, according to nearest time and appropriate frequency:
+#2022-01-17_2210.C1726 : 16700 MHz, 21200 MHz, 5500 MHz, 9000 MHz. Note: 1934-638_f is the focus scan and should be discarded.
+#2022-01-17_2250.C1726 : 2100 MHz
+
+export pcal_fname_pre=2022-01-17_2210.C1726 #primary calibration filename prefix
+
 
 #delete all files before a new run - uncomment this if you want to start fresh
 # rm -fr ${pcode}*.uv *.2100* *.5500 *.9000 
@@ -18,9 +26,9 @@ export pcal_fname_pre=2021-10-23_0707 #primary calibration filename prefix
 
 #note - make sure you discard all files used for array setup before you load data in (e.g. `rm 2021-01-11*.C1726`)
 
-atlod in=*.$pcode out=$pcode"_CX.uv" options=birdie,noauto,xycorr,rfiflag #CX = C/X band
+atlod in=*.$pcode out=$pcode".uv" options=birdie,noauto,xycorr,rfiflag #CX = C/X band
 #split into 1934-638.<blah blah>
-uvsplit vis=$pcode"_CX.uv"
+uvsplit vis=$pcode".uv"
 
 echo "loaded and split primary cal data"
 
@@ -41,7 +49,7 @@ uvspec vis=$pcal.${freq}${ifext} axis=chan,amp stokes=xx,yy device=/xs interval=
 read -p "Press enter to continue"
 
 
-#inspect bandpass just for xx, yy pols:
+#inspect bandpass just for xx, yy pols with all baselines overlaid
 uvspec vis=$pcal.${freq}${ifext} axis=chan,amp stokes=xx,yy device=/xs interval=9999 0.5, 5.5 options=nobase #all baselines overlaid
 read -p "Press enter to continue"
 
