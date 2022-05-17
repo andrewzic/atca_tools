@@ -188,15 +188,15 @@ if [[ $start_fresh == 1 ]]; then
 
 fi
 
-load_data()
+load_data
 
-flag_mfcal_sequence()
+flag_mfcal_sequence
 
-flag_gpcal_primary()
+flag_gpcal_primary
 
 gpcopy vis=$pcal.${freq}${ifext} out=$scal.${freq}${ifext}
 
-flag_gpcal_secondary()
+flag_gpcal_secondary
 
 #assuming all OK, apply flux scale from primary cal onto secondary:
 gpboot vis=$scal.${freq}${ifext} cal=$pcal.${freq}${ifext};
@@ -208,7 +208,7 @@ gpcopy vis=$scal.${freq}${ifext} out=$target.${freq}${ifext};
 gpaver vis=$target.${freq}${ifext} interval=2
 
 
-flag_target()
+flag_target
 
 #now apply calibrations to target using uvaver
 uvaver vis=$target.${freq}${ifext} out=$target.${freq}${ifext}.cal
