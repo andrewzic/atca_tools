@@ -5,7 +5,7 @@ from casacore.tables import *
 #import astropy.io.fits as pf
 #from astropy.time import Time
 
-ms = "j1107-5907_selfcal_uvsub.ms"
+ms = "my_src_selfcal_uvsub.ms"
 
 t = table(ms)
 tf = table("%s/SPECTRAL_WINDOW" %(ms))

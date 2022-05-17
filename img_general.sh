@@ -1,156 +1,250 @@
 #!/bin/bash
 
-#set some useful variable names
-export pcode=C3XYZ #project code
-export pcal=1934-638 #primary calibrator source name. Should be either 1934-638 or 0823-500
-export scal=ABC #secondary calibrator source name
-export target=XYZ #target name
-export freq=5500 #frequency band (e.g. 2100, 5500, 9000)
-export refant=1 #reference antenna for phase calibration
-export ifext="" #IF extension for L-band or zoom bands (e.g. cuvir.2100.1, cuvir.2100.2)
+#import variables from config file
+source ./config.sh
 
-export robust=1.0 #briggs weighting robustness parameter. 2.0 = Natural, -2.0 = uniform weighting
-export pb_imsize=5 #image size in primary beam widths for inversion and imaging. Note deconvolution should only happen in inner 50% of image
+dirty_image() {
 
-invert vis=$target.${freq}.cal map=$target.${freq}.cal.imap beam=$target.${freq}.cal.ibeam  robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
+    data=$1
+    stokes=$2
+    
+    invert vis=${data} map=${data}.${stokes}map beam=${data}.${stokes}beam  robust=${robust} stokes=${stokes} options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
 
-cgdisp in=$target.${freq}.cal.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge
+    fits in=${data}.${stokes}map op=xyout out=${data}.${stokes}dirty.fits
 
-cgdisp in=$target.${freq}.cal.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge "region=perc(30)"
+    return 0
+}
 
-invert vis=$target.${freq}.cal map=$target.${freq}.cal.vmap beam=$target.${freq}.cal.vbeam  robust=${robust} stokes=v options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
+cgcurs_map() {
 
-cgdisp in=$target.${freq}.cal.vmap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge "region=perc(30)"
+    data=$1
+    
+    cgcurs in=${data}.${stokes}map type=p range=0,0,log device=/xs labtyp=hms,dms options=region "region=perc(30)"
+    mv cgcurs.region ${target}_inner.region
+    cgcurs in=${data}.${stokes}map type=p range=0,0,log device=/xs labtyp=hms,dms options=region
 
-fits in=$target.${freq}.cal.imap op=xyout out=$target.${freq}.idirty.fits
-fits in=$target.${freq}.cal.vmap op=xyout out=$target.${freq}.vdirty.fits
-#fits in=$target.${freq}.cal.ibeam op=xyout out=$target.${freq}.dirtybeam.fits
+    cat ${target}_inner.region > ${target}_map.region
+    cat cgcurs.region >> ${target}_map.region
+    return 0
 
-cgdisp in=$target.${freq}.cal.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge "region=perc(30)"
-imlist in=$target.${freq}.cal.imap options=statistics
+}
 
-cgcurs in=$target.${freq}.cal.imap type=p range=0,0,log device=/xs labtyp=hms,dms options=region "region=perc(30)"
+clean_map() {
 
-mv cgcurs.region ${target}_inner.region
+    data=$1
+    stokes=$2
+    
+    mfclean map=${data}.${stokes}map beam=${data}.${stokes}beam out=${data}.${stokes}model cutoff=${clean_thresh} niters=${clean_niters} region=@${target}_map.region
 
-cgcurs in=$target.${freq}.cal.imap type=p range=0,0,log device=/xs labtyp=hms,dms options=region 
+    restor model=${data}.${stokes}model beam=${data}.${stokes}beam map=${data}.${stokes}map out=${data}.${stokes}restor
+    
+    fits in=${data}.${stokes}restor op=xyout out=$target.${stokes}.fits
+    
+    restor model=${data}.${stokes}model beam=${data}.${stokes}beam map=${data}.${stokes}map mode=residual out=${data}.${stokes}resid
 
-cat ${target}_inner.region > ${target}_map.region
-cat cgcurs.region >> ${target}_map.region
-#cp cgcurs.region $target.region
+    fits in=${data}.${stokes}resid op=xyout out=$target.${stokes}resid.fits
 
-mfclean map=$target.${freq}.cal.imap beam=$target.${freq}.cal.ibeam out=$target.${freq}.cal.imodel cutoff=6e-5 niters=10000 region=@${target}_map.region
+    return 0
+}
 
-restor model=$target.${freq}.cal.imodel beam=$target.${freq}.cal.ibeam map=$target.${freq}.cal.imap out=$target.${freq}.cal.irestor
+selfcal_phase() {
 
-fits in=$target.${freq}.cal.irestor op=xyout out=$target.i.fits
+    data=$1
+    iter=$2
+    
+    selfcal vis=${data} model=${data}.imodel interval=2 clip=0.001 options=phase,mfs
 
-restor model=$target.${freq}.cal.imodel beam=$target.${freq}.cal.ibeam map=$target.${freq}.cal.imap mode=residual out=$target.${freq}.cal.iresid
+    invert vis=${data} map=${data}.sc${iter}.imap beam=${data}.sc${iter}.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
 
-fits in=$target.${freq}.cal.iresid op=xyout out=$target.iresid.fits
+    mfclean map=${data}.sc${iter}.imap beam=${data}.sc${iter}.ibeam out=${data}.sc${iter}.imodel cutoff=${clean_thresh} niters=${clean_niters} region=@${target}_map.region
 
-cp -r $target.${freq}.cal $target.${freq}.selfcal.6
+    restor model=${data}.sc${iter}.imodel beam=${data}.sc${iter}.ibeam map=${data}.sc${iter}.imap out=${data}.sc${iter}.irestor
+    
+    fits in=${data}.sc${iter}.irestor op=xyout out=${data}.sc${iter}.i.fits
 
-selfcal vis=$target.${freq}.selfcal.6 model=$target.${freq}.cal.imodel interval=2 clip=0.001 options=phase,mfs
+    return 0
+}
 
-invert vis=$target.${freq}.selfcal.6 map=$target.${freq}.selfcal1.imap beam=$target.${freq}.selfcal1.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
 
-cgdisp in=$target.${freq}.selfcal1.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge
-cgdisp in=$target.${freq}.selfcal1.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge "region=perc(30)"
+selfcal_phase_sequence() {
 
-mfclean map=$target.${freq}.selfcal1.imap beam=$target.${freq}.selfcal1.ibeam out=$target.${freq}.selfcal1.imodel cutoff=6e-5 niters=100000 region=@${target}_map.region
+    data=$1
+    iter=0
+    scdata = ${data}.selfcal${iter}
+    cp -r ${data} ${scdata}
+    
+    while read continue_flag; do
+	echo "Type any key and hit enter to continue; enter a blank to stop"
+	#if input is blank, then exit loop
+	if [ ! -z ${continue_flag} ]; then
+	    break
+	fi
 
-restor model=$target.${freq}.selfcal1.imodel beam=$target.${freq}.selfcal1.ibeam map=$target.${freq}.selfcal1.imap out=$target.${freq}.selfcal1.irestor
+	selfcal_phase() ${scdata} ${iter}
 
-fits in=$target.${freq}.selfcal1.irestor op=xyout out=$target.selfcal1.fits
+	kvis ${scdata}.sc${iter}.i.fits
+	
+	((iter++))
 
-cp -r $target.${freq}.selfcal.6 $target.${freq}.selfcal1.6
+	cp -r ${scdata} ${data}.selfcal${iter}
+	scdata=${data}.selfcal${iter}
+	
+    done
 
-selfcal vis=$target.${freq}.selfcal.6 model=$target.${freq}.selfcal1.imodel interval=1 clip=0.001 options=phase,mfs
+    return 0
+}
 
-invert vis=$target.${freq}.selfcal.6 map=$target.${freq}.selfcal2.imap beam=$target.${freq}.selfcal2.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
+uvmodel_mfs() {
 
-#cgdisp in=$target.${freq}.selfcal2.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge
+    data=$1
+    model=$2
+    uvmodel vis=${data} model=${model} options="subtract,mfs"
 
-#cgdisp in=$target.${freq}.selfcal2.v.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge "region=perc(30)"
+    return 0
+    
+}
 
-mfclean map=$target.${freq}.selfcal2.imap beam=$target.${freq}.selfcal2.ibeam out=$target.${freq}.selfcal2.imodel cutoff=5.5e-5 niters=20000 region=@${target}_map.region
 
-restor model=$target.${freq}.selfcal2.imodel beam=$target.${freq}.selfcal2.ibeam map=$target.${freq}.selfcal2.imap out=$target.${freq}.selfcal2.irestor
+dirty_image $target.${freq}${ifext}.cal i
 
-fits in=$target.${freq}.selfcal2.irestor op=xyout out=$target.selfcal2.fits
+cgcurs_map i
 
-cp -r $target.${freq}.selfcal.6 $target.${freq}.selfcal2.6
+clean_map $target.${freq}${ifext}.cal i
 
-selfcal vis=$target.${freq}.selfcal.6 model=$target.${freq}.selfcal2.imodel interval=1 clip=0.001 options=phase,mfs
+uvmodel_mfs $target.${freq}${ifext}.cal ${target}.${freq}${ifext}.cal.imodel
 
-invert vis=$target.${freq}.selfcal.6 map=$target.${freq}.selfcal3.imap beam=$target.${freq}.selfcal3.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
+selfcal_phase_sequence ${target}.${freq}${ifext}.cal
 
-#cgdisp in=$target.${freq}.selfcal3.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge "region=perc(30)"
 
-mfclean map=$target.${freq}.selfcal3.imap beam=$target.${freq}.selfcal3.ibeam out=$target.${freq}.selfcal3.imodel cutoff=5.5e-5 niters=100000 region=@${target}_map.region
+# invert vis=$target.${freq}${ifext}.cal map=$target.${freq}${ifext}.cal.imap beam=$target.${freq}${ifext}.cal.ibeam  robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
 
-restor model=$target.${freq}.selfcal3.imodel beam=$target.${freq}.selfcal3.ibeam map=$target.${freq}.selfcal3.imap out=$target.${freq}.selfcal3.irestor
+# invert vis=$target.${freq}${ifext}.cal map=$target.${freq}${ifext}.cal.vmap beam=$target.${freq}${ifext}.cal.vbeam  robust=${robust} stokes=v options=mfs,sdb imsize=1,1,beam
 
-fits in=$target.${freq}.selfcal3.irestor op=xyout out=$target.selfcal3.fits
+# fits in=$target.${freq}${ifext}.cal.imap op=xyout out=$target.${freq}.idirty.fits
+# fits in=$target.${freq}${ifext}.cal.vmap op=xyout out=$target.${freq}.vdirty.fits
+# #fits in=$target.${freq}${ifext}.cal.ibeam op=xyout out=$target.${freq}.dirtybeam.fits
 
-cp -r $target.${freq}.selfcal.6 $target.${freq}.selfcal3.6
+# cgdisp in=$target.${freq}${ifext}.cal.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge "region=perc(30)"
+# imlist in=$target.${freq}${ifext}.cal.imap options=statistics
 
-selfcal vis=$target.${freq}.selfcal.6 model=$target.${freq}.selfcal3.imodel interval=1 clip=0.02 options=phase,mfs
+# cgcurs in=$target.${freq}${ifext}.cal.imap type=p range=0,0,log device=/xs labtyp=hms,dms options=region "region=perc(30)"
 
-invert vis=$target.${freq}.selfcal.6 map=$target.${freq}.selfcal4.imap beam=$target.${freq}.selfcal4.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
+# mv cgcurs.region ${target}_inner.region
 
+# cgcurs in=$target.${freq}${ifext}.cal.imap type=p range=0,0,log device=/xs labtyp=hms,dms options=region 
 
-mfclean map=$target.${freq}.selfcal4.imap beam=$target.${freq}.selfcal4.ibeam out=$target.${freq}.selfcal4.imodel cutoff=5.0e-5 niters=500000 region=@${target}_map.region
+# cat ${target}_inner.region > ${target}_map.region
+# cat cgcurs.region >> ${target}_map.region
+# #cp cgcurs.region $target.region
 
-restor model=$target.${freq}.selfcal4.imodel beam=$target.${freq}.selfcal4.ibeam map=$target.${freq}.selfcal4.imap out=$target.${freq}.selfcal4.irestor
+# mfclean map=$target.${freq}${ifext}.cal.imap beam=$target.${freq}${ifext}.cal.ibeam out=$target.${freq}${ifext}.cal.imodel cutoff=6e-5 niters=10000 region=@${target}_map.region
 
-fits in=$target.${freq}.selfcal4.irestor op=xyout out=$target.selfcal4.fits
+# restor model=$target.${freq}${ifext}.cal.imodel beam=$target.${freq}${ifext}.cal.ibeam map=$target.${freq}${ifext}.cal.imap out=$target.${freq}${ifext}.cal.irestor
 
-cp -r $target.${freq}.selfcal.6 $target.${freq}.selfcal4.6
+# fits in=$target.${freq}${ifext}.cal.irestor op=xyout out=$target.i.fits
 
-#this is the end of selfcal. amp selfcal only makes worse
-uvaver vis=$target.${freq}.selfcal4.6 out=$target.${freq}.selfcal4.cal.6
+# restor model=$target.${freq}${ifext}.cal.imodel beam=$target.${freq}${ifext}.cal.ibeam map=$target.${freq}${ifext}.cal.imap mode=residual out=$target.${freq}${ifext}.cal.iresid
 
+# fits in=$target.${freq}${ifext}.cal.iresid op=xyout out=$target.iresid.fits
 
-uvmodel vis=$target.${freq}.selfcal4.cal.6 model=$target.${freq}.selfcal4.imodel options=subtract,mfs out=$target.${freq}.uvsub.6
+# cp -r $target.${freq}${ifext}.cal $target.${freq}.selfcal
 
-invert vis=$target.${freq}.uvsub.6 map=$target.${freq}.uvsub.imap beam=$target.${freq}.uvsub.ibeam robust=${robust} stokes=i options=mfs,sdb  imsize=${pb_imsize},${pb_imsize},beam
+# selfcal vis=$target.${freq}.selfcal model=$target.${freq}${ifext}.cal.imodel interval=2 clip=0.001 options=phase,mfs
 
-fits in=$target.${freq}.uvsub.imap op=xyout out=$target.uvsub.dirty.fits
+# invert vis=$target.${freq}.selfcal map=$target.${freq}.selfcal1.imap beam=$target.${freq}.selfcal1.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
 
+# cgdisp in=$target.${freq}.selfcal1.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge
+# cgdisp in=$target.${freq}.selfcal1.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge "region=perc(30)"
 
-# selfcal vis=$target.${freq}.selfcal.6 model=$target.${freq}.selfcal4.imodel interval=4 clip=0.02 options=amplitude,mfs
 
-# invert vis=$target.${freq}.selfcal.6 map=$target.${freq}.selfcal5.imap beam=$target.${freq}.selfcal5.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
 
+# cp -r $target.${freq}.selfcal $target.${freq}.selfcal1
 
-# mfclean map=$target.${freq}.selfcal5.imap beam=$target.${freq}.selfcal5.ibeam out=$target.${freq}.selfcal5.imodel cutoff=5.0e-5 niters=500000 region=@${target}_map.region
+# selfcal vis=$target.${freq}.selfcal model=$target.${freq}.selfcal1.imodel interval=1 clip=0.001 options=phase,mfs
 
-# restor model=$target.${freq}.selfcal5.imodel beam=$target.${freq}.selfcal5.ibeam map=$target.${freq}.selfcal5.imap out=$target.${freq}.selfcal5.irestor
+# invert vis=$target.${freq}.selfcal map=$target.${freq}.selfcal2.imap beam=$target.${freq}.selfcal2.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
 
-# fits in=$target.${freq}.selfcal5.irestor op=xyout out=$target.selfcal5.fits
+# #cgdisp in=$target.${freq}.selfcal2.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge
 
-# cp -r $target.${freq}.selfcal.6 $target.${freq}.selfcal5.6
+# #cgdisp in=$target.${freq}.selfcal2.v.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge "region=perc(30)"
 
+# mfclean map=$target.${freq}.selfcal2.imap beam=$target.${freq}.selfcal2.ibeam out=$target.${freq}.selfcal2.imodel cutoff=5.5e-5 niters=20000 region=@${target}_map.region
 
-# selfcal vis=$target.${freq}.selfcal.6 model=$target.${freq}.selfcal5.imodel interval=1 clip=0.02 options=amplitude,mfs
+# restor model=$target.${freq}.selfcal2.imodel beam=$target.${freq}.selfcal2.ibeam map=$target.${freq}.selfcal2.imap out=$target.${freq}.selfcal2.irestor
 
-# invert vis=$target.${freq}.selfcal.6 map=$target.${freq}.selfcal6.imap beam=$target.${freq}.selfcal6.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
+# fits in=$target.${freq}.selfcal2.irestor op=xyout out=$target.selfcal2.fits
 
+# cp -r $target.${freq}.selfcal $target.${freq}.selfcal2
 
-# mfclean map=$target.${freq}.selfcal6.imap beam=$target.${freq}.selfcal6.ibeam out=$target.${freq}.selfcal6.imodel cutoff=5.0e-5 niters=500000 region=@${target}_map.region
+# selfcal vis=$target.${freq}.selfcal model=$target.${freq}.selfcal2.imodel interval=1 clip=0.001 options=phase,mfs
 
-# restor model=$target.${freq}.selfcal6.imodel beam=$target.${freq}.selfcal6.ibeam map=$target.${freq}.selfcal6.imap out=$target.${freq}.selfcal6.irestor
+# invert vis=$target.${freq}.selfcal map=$target.${freq}.selfcal3.imap beam=$target.${freq}.selfcal3.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
 
-# fits in=$target.${freq}.selfcal6.irestor op=xyout out=$target.selfcal6.fits
+# #cgdisp in=$target.${freq}.selfcal3.imap/ type=p device=/xs labtyp=hms,dms range=0,0,log options=wedge "region=perc(30)"
 
-# cp -r $target.${freq}.selfcal.6 $target.${freq}.selfcal6.6
+# mfclean map=$target.${freq}.selfcal3.imap beam=$target.${freq}.selfcal3.ibeam out=$target.${freq}.selfcal3.imodel cutoff=5.5e-5 niters=100000 region=@${target}_map.region
 
+# restor model=$target.${freq}.selfcal3.imodel beam=$target.${freq}.selfcal3.ibeam map=$target.${freq}.selfcal3.imap out=$target.${freq}.selfcal3.irestor
 
-# fits in=$target.${freq}.cal.iresid op=xyout out=$target.resid.fits
+# fits in=$target.${freq}.selfcal3.irestor op=xyout out=$target.selfcal3.fits
 
-# fits in=$target.${freq}.cal.irestor2 op=xyout out=$target.fits
+# cp -r $target.${freq}.selfcal $target.${freq}.selfcal3
 
-#mfclean map=$target.${freq}.cal.imap beam=$target.${freq}.cal.ibeam niters=500 out=$target.${freq}.cal.imodel
-#"region=relcenter,boxes(-1004,-1004,1004,1004)"
+# selfcal vis=$target.${freq}.selfcal model=$target.${freq}.selfcal3.imodel interval=1 clip=0.02 options=phase,mfs
+
+# invert vis=$target.${freq}.selfcal map=$target.${freq}.selfcal4.imap beam=$target.${freq}.selfcal4.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
+
+
+# mfclean map=$target.${freq}.selfcal4.imap beam=$target.${freq}.selfcal4.ibeam out=$target.${freq}.selfcal4.imodel cutoff=5.0e-5 niters=500000 region=@${target}_map.region
+
+# restor model=$target.${freq}.selfcal4.imodel beam=$target.${freq}.selfcal4.ibeam map=$target.${freq}.selfcal4.imap out=$target.${freq}.selfcal4.irestor
+
+# fits in=$target.${freq}.selfcal4.irestor op=xyout out=$target.selfcal4.fits
+
+# cp -r $target.${freq}.selfcal $target.${freq}.selfcal4
+
+# #this is the end of selfcal. amp selfcal only makes worse
+# uvaver vis=$target.${freq}.selfcal4 out=$target.${freq}.selfcal4.cal
+
+
+# uvmodel vis=$target.${freq}.selfcal4.cal model=$target.${freq}.selfcal4.imodel options=subtract,mfs out=$target.${freq}.uvsub
+
+# invert vis=$target.${freq}.uvsub map=$target.${freq}.uvsub.imap beam=$target.${freq}.uvsub.ibeam robust=${robust} stokes=i options=mfs,sdb  imsize=${pb_imsize},${pb_imsize},beam
+
+# fits in=$target.${freq}.uvsub.imap op=xyout out=$target.uvsub.dirty.fits
+
+
+# # selfcal vis=$target.${freq}.selfcal model=$target.${freq}.selfcal4.imodel interval=4 clip=0.02 options=amplitude,mfs
+
+# # invert vis=$target.${freq}.selfcal map=$target.${freq}.selfcal5.imap beam=$target.${freq}.selfcal5.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
+
+
+# # mfclean map=$target.${freq}.selfcal5.imap beam=$target.${freq}.selfcal5.ibeam out=$target.${freq}.selfcal5.imodel cutoff=5.0e-5 niters=500000 region=@${target}_map.region
+
+# # restor model=$target.${freq}.selfcal5.imodel beam=$target.${freq}.selfcal5.ibeam map=$target.${freq}.selfcal5.imap out=$target.${freq}.selfcal5.irestor
+
+# # fits in=$target.${freq}.selfcal5.irestor op=xyout out=$target.selfcal5.fits
+
+# # cp -r $target.${freq}.selfcal $target.${freq}.selfcal5
+
+
+# # selfcal vis=$target.${freq}.selfcal model=$target.${freq}.selfcal5.imodel interval=1 clip=0.02 options=amplitude,mfs
+
+# # invert vis=$target.${freq}.selfcal map=$target.${freq}.selfcal6.imap beam=$target.${freq}.selfcal6.ibeam robust=${robust} stokes=i options=mfs,sdb imsize=${pb_imsize},${pb_imsize},beam
+
+
+# # mfclean map=$target.${freq}.selfcal6.imap beam=$target.${freq}.selfcal6.ibeam out=$target.${freq}.selfcal6.imodel cutoff=5.0e-5 niters=500000 region=@${target}_map.region
+
+# # restor model=$target.${freq}.selfcal6.imodel beam=$target.${freq}.selfcal6.ibeam map=$target.${freq}.selfcal6.imap out=$target.${freq}.selfcal6.irestor
+
+# # fits in=$target.${freq}.selfcal6.irestor op=xyout out=$target.selfcal6.fits
+
+# # cp -r $target.${freq}.selfcal $target.${freq}.selfcal6
+
+
+# # fits in=$target.${freq}${ifext}.cal.iresid op=xyout out=$target.resid.fits
+
+# # fits in=$target.${freq}${ifext}.cal.irestor2 op=xyout out=$target.fits
+
+# #mfclean map=$target.${freq}${ifext}.cal.imap beam=$target.${freq}${ifext}.cal.ibeam niters=500 out=$target.${freq}${ifext}.cal.imodel
+# #"region=relcenter,boxes(-1004,-1004,1004,1004)"

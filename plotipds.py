@@ -210,10 +210,10 @@ print(f0)
 tfile = 'time.npy'
 ffile = 'freq.npy'
 
-XXfile = 'j1107-5907.2100_dynamic_spectra_XX.npy'
-XYfile = 'j1107-5907.2100_dynamic_spectra_XY.npy'
-YXfile = 'j1107-5907.2100_dynamic_spectra_YX.npy'
-YYfile = 'j1107-5907.2100_dynamic_spectra_YY.npy'
+XXfile = 'my_src.2100_dynamic_spectra_XX.npy'
+XYfile = 'my_src.2100_dynamic_spectra_XY.npy'
+YXfile = 'my_src.2100_dynamic_spectra_YX.npy'
+YYfile = 'my_src.2100_dynamic_spectra_YY.npy'
 
 t0, times, freqs, dts, dt2, scan_start_indices, scan_end_indices = get_time_freq_atca(tfile, ffile)
 

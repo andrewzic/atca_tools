@@ -10,12 +10,12 @@ XY=1
 YX=2
 YY=3
 
-src_name = "j1107-5907"
+src_name = "my_src"
 pols = ["XX", "XY", "YX", "YY"]
 for freq in ["2100"]:
     for pol in [XX, XY, YX, YY]:
         #ms = "%s.%s.ms" %(src_name, freq)
-        msname='j1107-5907.ms'
+        msname='my_src.ms'
         outfile = "%s.%s_dynamic_spectra_%s.npy" %(src_name, freq, pols[pol])
     
         t = table(msname)
