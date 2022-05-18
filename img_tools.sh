@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #import variables from config
-are source ./config.sh
+source ./config.sh
 
 dirty_image() {
 
