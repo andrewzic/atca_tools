@@ -160,7 +160,7 @@ flag_gpcal_primary() {
     #auto-flag
     auto_flag ${pcal}
     spec_freq=$(printf %.1f "$((  10**3 * $( echo ${freq} ) / 1000 ))e-3")
-    gpcal vis=$pcal.${freq}${ifext} interval=${interval} options=xyvary minants=3 nfbin=${nfbin} refant=$refant spec=${spec_freq}
+    gpcal vis=$pcal.${freq}${ifext} interval=${interval} options=xyvary minants=3 nfbin=${gpcal_nfbins} refant=$refant spec=${spec_freq}
 
     #check out primary cal data in real vs imag. This should look like a fat line that extends horizontally on the real axis, and is centered around 0 on the imaginary axis
     uvplt vis=$pcal.${freq}${ifext} axis=real,imag stokes=xx,yy options=nofqav,nobase,equal device=/xs
