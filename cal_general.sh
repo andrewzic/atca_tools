@@ -16,7 +16,7 @@ blflag_data $pcal time phase
 
 flag_mfcal_sequence
 
-flag_gpcal_primary
+flag_gpcal_primary_sequence
 
 gpcopy vis=$pcal.${freq}${ifext} out=$scal.${freq}${ifext}
 
