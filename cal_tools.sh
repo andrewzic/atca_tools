@@ -175,14 +175,17 @@ flag_gpcal_primary_sequence() {
     uvplt vis=$pcal.${freq}${ifext} axis=real,imag stokes=xx,yy options=nofqav nxy=5,3  device=/xs
     #stop and wait to continue
     read -p "Press enter to continue"
-
-    while read -s -p "hit enter to continue; type any key and hit enter stop" continue_flag; do
+    
+    read -s -p "hit enter to continue; type any key and hit enter stop" continue_flag
+    while [[ -z ${continue_flag} ]]; do
 	#if input is blank, then exit loop
 	if [ ! -z ${continue_flag} ]; then
 	    break
 	fi
 	
 	flag_gpcal_primary 0.1
+
+	read -s -p "hit enter to continue; type any key and hit enter stop" continue_flag
 	
     done
 
