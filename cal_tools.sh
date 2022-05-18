@@ -105,8 +105,8 @@ flag_mfcal_sequence() {
     mfcal vis=${pcal}.${freq}${ifext} interval=15.0 refant=$refant
 
     echo "doing flag-bandpass cal with interval=1.0"
-    
-    while read -p -s "hit enter to continue; type any key and hit enter stop" continue_flag; do
+    read -s -p "hit enter to continue; type any key and hit enter stop" continue_flag
+    while ; do
 	#if input is blank, then exit loop
 	if [ ! -z ${continue_flag} ]; then
 	    break
@@ -117,7 +117,7 @@ flag_mfcal_sequence() {
     done
 
     echo "doing flag-bandpass cal with interval = 0.1"
-    while read -p -s "hit enter to continue; type any key and hit enter stop" continue_flag2; do
+    while read -s -p "hit enter to continue; type any key and hit enter stop" continue_flag2; do
 	#if input is blank, then exit loop
 	if [ ! -z ${continue_flag2} ]; then
 	    break
@@ -169,7 +169,7 @@ flag_gpcal_primary_sequence() {
     #stop and wait to continue
     read -p "Press enter to continue"
 
-    while read -p -s "hit enter to continue; type any key and hit enter stop" continue_flag; do
+    while read -s -p "hit enter to continue; type any key and hit enter stop" continue_flag; do
 	#if input is blank, then exit loop
 	if [ ! -z ${continue_flag} ]; then
 	    break
