@@ -26,7 +26,7 @@ export freq=2100
 export refant=3
 
 #no. frequency bins for gpcal. Default = 4
-export gpcal_nfbins=8
+export gpcal_nfbins=4
 
 #File IF extension. When observing in L-band, both IFs are centred at 2100 MHz, so ".1" or ".2" etc. are added to the file extension
 #Only required if freq = 2100 or if using zoom bands
