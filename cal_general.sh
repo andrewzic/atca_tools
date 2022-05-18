@@ -26,7 +26,7 @@ gpcopy vis=$scal.${freq}${ifext} out=$target.${freq}${ifext};
 gpaver vis=$target.${freq}${ifext} interval=2
 
 
-flag_target
+auto_flag_target
 
 #now apply calibrations to target using uvaver
 uvaver vis=$target.${freq}${ifext} out=$target.${freq}${ifext}.cal

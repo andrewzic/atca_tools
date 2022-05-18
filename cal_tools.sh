@@ -58,16 +58,28 @@ auto_flag() {
     return 0
 }
 
-auto_flag_target() {
+blflag_data() {
 
     src=$1
+    x=$2
+    y=$3
+    
+    blflag vis=${src}.$freq${ifext} options=nobase,nofqav stokes=xx,yy device=/xs axis=${x},${y}
+    
+}
+
+auto_flag_target() {
+
+    auto_flag $target
+    auto_flag $target v
+    auto_flag $target i
     
     #do some auto-flagging
     #on Q, U
-    pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xx,yy,xy,yx flagpar=7,5,5,3,6,3,20 options=nodisp
-    pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xx,yy,yx,xy flagpar=7,5,5,3,6,3,20 options=nodisp
+    #pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xx,yy,xy,yx flagpar=7,5,5,3,6,3,20 options=nodisp
+    #pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xx,yy,yx,xy flagpar=7,5,5,3,6,3,20 options=nodisp
     #on I
-    pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=v,q,u,i flagpar=7,5,5,3,6,3,20 options=nodisp
+    #pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=v,q,u,i flagpar=7,5,5,3,6,3,20 options=nodisp
     ##on xx,yy
     #pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xy,yx,xx,yy flagpar=7,5,5,3,6,3,20 options=nodisp
     #pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xy,yx,yy,xx flagpar=7,5,5,3,6,3,20 options=nodisp
@@ -164,7 +176,7 @@ flag_gpcal_primary_sequence() {
     #set reference frequency in GHz for gpcal
     spec_freq=$(printf %.1f "$((  10**3 * $( echo ${freq} ) / 1000 ))e-3")
     
-    gpcal vis=$pcal.${freq}${ifext} interval=1 options=xyvary minants=3 nfbin=${gpcal_nfbins} spec=${spec_freq} refant=$refant
+    gpcal vis=$pcal.${freq}${ifext} interval=1 options=xyvary minants=3 nfbin=${gpcal_nfbins} refant=$refant #spec=${spec_freq} 
 
     #check out primary cal data in real vs imag. This should look like a fat line that extends horizontally on the real axis, and is centered around 0 on the imaginary axis
     uvplt vis=$pcal.${freq}${ifext} axis=real,imag stokes=xx,yy options=nofqav,nobase,equal device=/xs
