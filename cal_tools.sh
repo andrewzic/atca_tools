@@ -31,16 +31,27 @@ load_data() {
 auto_flag() {
 
     src=$1
+    v=$2
     
     #do some auto-flagging
-    #first do on Stokes xy, yx
-    pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xx,yy,yx,xy flagpar=7,5,5,3,6,3,20 options=nodisp
-    pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xx,yy,xy,yx flagpar=7,5,5,3,6,3,20 options=nodisp
+    if [[ -z ${v} ]]; then
+	#first do on Stokes xy, yx
+	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xx,yy,yx,xy  options=nodisp #flagpar=7,5,5,3,6,3,20
+	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xx,yy,xy,yx  options=nodisp #flagpar=7,5,5,3,6,3,20
+    elif [[ ${v} == "v" ]]; then
+	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=i,q,u,v  options=nodisp #flagpar=7,5,5,3,6,3,20
+	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=i,q,v,u  options=nodisp #flagpar=7,5,5,3,6,3,20
+    else;
+	return 1
+	echo "please enter a blank value or 'v'"
+    fi
+	
+    
     #now on each instr. pol. independently
-    for stokes in xx yy xy yx
-    do
-	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=${stokes} flagpar=7,5,5,3,6,3,20 options=nodisp
-    done
+    # for stokes in xx yy xy yx
+    # do
+    # 	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=${stokes} flagpar=7,5,5,3,6,3,20 options=nodisp
+    # done
     ##then Q, U
     #pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=i,v,q,u flagpar=7,5,5,3,6,3,20 options=nodisp
     #pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=i,v,u,q flagpar=7,5,5,3,6,3,20 options=nodisp
