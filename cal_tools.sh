@@ -31,16 +31,19 @@ load_data() {
 auto_flag() {
 
     src=$1
-    v=$2
+    stokes=$2
     
     #do some auto-flagging
-    if [[ -z ${v} ]]; then
+    if [[ -z ${stokes} ]]; then
 	#first do on Stokes xy, yx
 	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xx,yy,yx,xy  options=nodisp #flagpar=7,5,5,3,6,3,20
 	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=xx,yy,xy,yx  options=nodisp #flagpar=7,5,5,3,6,3,20
-    elif [[ ${v} == "v" ]]; then
+    elif [[ ${stokes} == "v" ]]; then
 	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=i,q,u,v  options=nodisp #flagpar=7,5,5,3,6,3,20
 	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=i,q,v,u  options=nodisp #flagpar=7,5,5,3,6,3,20
+    elif [[ ${stokes} == "i" ]]; then
+	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=v,u,q,i  options=nodisp #flagpar=7,5,5,3,6,3,20
+	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=v,u,i,q  options=nodisp #flagpar=7,5,5,3,6,3,20	
     else
 	return 1
 	echo "please enter a blank value or 'v'"
