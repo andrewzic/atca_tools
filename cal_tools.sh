@@ -41,7 +41,7 @@ auto_flag() {
     elif [[ ${v} == "v" ]]; then
 	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=i,q,u,v  options=nodisp #flagpar=7,5,5,3,6,3,20
 	pgflag vis=${src}.${freq}${ifext} "command=<b" device=/xs stokes=i,q,v,u  options=nodisp #flagpar=7,5,5,3,6,3,20
-    else;
+    else
 	return 1
 	echo "please enter a blank value or 'v'"
     fi
