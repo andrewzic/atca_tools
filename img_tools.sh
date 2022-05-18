@@ -80,7 +80,7 @@ selfcal_phase_sequence() {
 	    break
 	fi
 
-	selfcal_phase() ${scdata} ${iter}
+	selfcal_phase ${scdata} ${iter}
 
 	kvis ${scdata}.sc${iter}.i.fits
 	
