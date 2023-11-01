@@ -50,3 +50,7 @@ export robust=1.5
 
 #image size in primary beam widths for inversion and imaging. Note - source deconvolution should only happen in inner 50% of image
 export pb_imsize=4
+
+export nmfcal_auto=5
+
+export ngpcal_auto=5

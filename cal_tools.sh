@@ -247,6 +247,28 @@ flag_gpcal_primary() {
     
 }
 
+flag_gpcal_primary_auto() {
+
+    interval=$1
+    
+    #auto-flag
+    auto_flag ${pcal}
+    spec_freq=$(printf %.1f "$((  10**3 * $( echo ${freq} ) / 1000 ))e-3")
+    gpcal vis=${PROJ_DATA}/$pcal.${freq}${ifext} interval=${interval} options=xyvary minants=3 nfbin=${gpcal_nfbins} refant=$refant spec=${spec_freq}
+
+    #check out primary cal data in real vs imag. This should look like a fat line that extends horizontally on the real axis, and is centered around 0 on the imaginary axis
+    uvplt vis=${PROJ_DATA}/$pcal.${freq}${ifext} axis=real,imag stokes=xx,yy options=nofqav,nobase,equal device=/cps
+    #stop and wait to continue
+    #read -p "Press enter to continue"
+
+    #inspect per baseline
+    uvplt vis=${PROJ_DATA}/$pcal.${freq}${ifext} axis=real,imag stokes=xx,yy options=nofqav nxy=5,3  device=/cps
+    #stop and wait to continue
+    #read -p "Press enter to continue"
+    
+}
+
+
 flag_gpcal_primary_sequence() {
 
     #set reference frequency in GHz for gpcal
@@ -280,6 +302,38 @@ flag_gpcal_primary_sequence() {
 
     return 0
 }
+
+
+flag_gpcal_primary_sequence_auto() {
+
+
+    niter_flag_gpcal=$1
+    #set reference frequency in GHz for gpcal
+    spec_freq=$(printf %.1f "$((  10**3 * $( echo ${freq} ) / 1000 ))e-3")
+    
+    gpcal vis=${PROJ_DATA}/$pcal.${freq}${ifext} interval=0.1 options=xyvary minants=3 nfbin=${gpcal_nfbins} refant=$refant spec=${spec_freq} 
+
+    #check out primary cal data in real vs imag. This should look like a fat line that extends horizontally on the real axis, and is centered around 0 on the imaginary axis
+    uvplt vis=${PROJ_DATA}/$pcal.${freq}${ifext} axis=real,imag stokes=xx,yy options=nofqav,nobase,equal device=/xs
+    #stop and wait to continue
+    #read -p "Press enter to continue"
+
+    #inspect per baseline
+    uvplt vis=${PROJ_DATA}/$pcal.${freq}${ifext} axis=real,imag stokes=xx,yy options=nofqav nxy=5,3  device=/xs
+    #stop and wait to continue
+    #read -p "Press enter to continue"
+    for it__ in `seq 0 ${niter_flag_gpcal}`;
+    do
+	
+	flag_gpcal_primary_auto 0.1
+
+    done
+
+
+    return 0
+}
+
+
 
 flag_gpcal_secondary() {
 

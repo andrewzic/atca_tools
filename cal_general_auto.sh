@@ -8,21 +8,22 @@ restart_proc
 
 load_data
 
-flag_mfcal_sequence_auto 5
+flag_mfcal_sequence_auto ${nmfcal_auto}
 
 #for manual flagging
 blflag_data $pcal chan amp
 blflag_data $pcal chan phase
 blflag_data $pcal time phase
 
-flag_mfcal_sequence_auto 5
+flag_mfcal_sequence_auto ${nmfcal_auto}
 
-flag_gpcal_primary_sequence_auto 5
+flag_gpcal_primary_sequence_auto ${ngpcal_auto}
 
 gpcopy vis=${PROJ_DATA}/$pcal.${freq}${ifext} out=${PROJ_DATA}/$scal.${freq}${ifext}
 
-flag_gpcal_secondary
-flag_gpcal_secondary
+
+flag_gpcal_secondary_auto
+flag_gpcal_secondary_auto
 
 #assuming all OK, apply flux scale from primary cal onto secondary:
 gpboot vis=${PROJ_DATA}/$scal.${freq}${ifext} cal=${PROJ_DATA}/$pcal.${freq}${ifext};
