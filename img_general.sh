@@ -4,10 +4,14 @@
 source ./config.sh
 source ./img_tools.sh
 
+cd ${PROJ_IMG}
 
-dirty_image $target.${freq}${ifext}.cal i
+# dirty_image $target.${freq}${ifext}.cal i
+# dirty_image $target.${freq}${ifext}.cal q
+# dirty_image $target.${freq}${ifext}.cal u
+# dirty_image $target.${freq}${ifext}.cal v
 
-cgcurs_map i
+# cgcurs_map $target.${freq}${ifext}.cal i
 
 clean_map $target.${freq}${ifext}.cal i
 
